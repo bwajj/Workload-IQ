@@ -1,0 +1,19 @@
+name: Keep backend warm
+
+# Render's free tier spins the service down after ~15 min idle, adding a ~50s
+# cold-start to the next request. Pinging /api/health on a schedule keeps the
+# instance awake so the live app stays fast. Best-effort: GitHub cron can be
+# delayed under load, so the interval is set well under the 15-min sleep window.
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 minutes
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -sS -m 90 --retry 3 --retry-all-errors \
+            https://workloadiq-api.onrender.com/api/health -o /dev/null -w "%{http_code}\n"
