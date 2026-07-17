@@ -119,6 +119,7 @@ def health():
         "dataSource": DATA_SOURCE,
         "today": reference_now().isoformat() if reachable else None,
         "lastRefresh": last.isoformat() if last else None,
+        "mongoDebug": db.ping_debug(),
     })
 
 
