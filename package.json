@@ -1,0 +1,30 @@
+{
+  "name": "pl-injury-risk-platform",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Premier League workload / injury-risk analytics platform (React + Flask + MongoDB)",
+  "scripts": {
+    "dev": "concurrently -n mongo,api,web -c magenta,blue,green \"npm:dev:mongo\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:mongo": "backend/mongodb/mongodb-macos-aarch64-7.0.14/bin/mongod --dbpath backend/.mongo-data --port 27017 --bind_ip 127.0.0.1 --quiet",
+    "dev:api": "DATA_SOURCE=apifootball backend/venv/bin/python backend/app.py",
+    "dev:web": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.6"
+  }
+}

@@ -1,0 +1,22 @@
+# Node / frontend
+node_modules
+dist
+*.log
+.DS_Store
+
+# Python / backend
+backend/venv
+backend/__pycache__
+**/__pycache__
+*.pyc
+
+# MongoDB (downloaded binary + local data)
+backend/mongodb
+backend/.mongo-data
+
+# Secrets & API cache
+backend/.env
+backend/.api-cache
+backend/.auth-secret
+backend/.fpl-cache
+backend/outbox/
