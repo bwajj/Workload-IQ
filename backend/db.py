@@ -73,15 +73,3 @@ def ping() -> bool:
         return True
     except Exception:
         return False
-
-
-def ping_debug() -> dict:
-    """Diagnostic: report URI scheme + host (no creds) and any ping error."""
-    scheme = MONGO_URI.split("://", 1)[0] if "://" in MONGO_URI else "?"
-    host = MONGO_URI.rsplit("@", 1)[-1].split("/", 1)[0].split("?", 1)[0]
-    err = None
-    try:
-        get_client().admin.command("ping")
-    except Exception as e:
-        err = f"{type(e).__name__}: {e}"
-    return {"scheme": scheme, "host": host, "error": err}
