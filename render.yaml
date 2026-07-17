@@ -1,0 +1,39 @@
+# Render blueprint — deploy the Flask API from this repo.
+# New → Blueprint → pick this repo. Fill the `sync: false` secret values in the
+# Render dashboard (they are NOT committed).
+services:
+  - type: web
+    name: workloadiq-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --timeout 180 --workers 1
+    envVars:
+      - key: DATA_SOURCE
+        value: apifootball
+      - key: INGEST_SEASONS
+        value: "2022,2023,2024,2025"
+      - key: API_FOOTBALL_HOST
+        value: v3.football.api-sports.io
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      # --- secrets: set these in the dashboard ---
+      - key: MONGO_URI          # Atlas SRV connection string
+        sync: false
+      - key: API_FOOTBALL_KEY
+        sync: false
+      - key: AUTH_SECRET        # any long random string
+        sync: false
+      - key: APP_URL            # your Vercel URL, e.g. https://workloadiq.vercel.app
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
