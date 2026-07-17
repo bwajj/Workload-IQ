@@ -5,6 +5,7 @@ per-player box-score documents and `injuries` holds injury-report documents
 whose fields vary by injury type. Mongo's document model fits this naturally.
 """
 import os
+import certifi
 from pymongo import MongoClient, ASCENDING
 
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
@@ -16,7 +17,12 @@ _client = None
 def get_client() -> MongoClient:
     global _client
     if _client is None:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+        kwargs = {"serverSelectionTimeoutMS": 3000}
+        # Atlas (mongodb+srv / TLS) needs a CA bundle; certifi ships one so it
+        # works regardless of the OS's system certs.
+        if MONGO_URI.startswith("mongodb+srv") or "mongodb.net" in MONGO_URI:
+            kwargs["tlsCAFile"] = certifi.where()
+        _client = MongoClient(MONGO_URI, **kwargs)
     return _client
 
 
