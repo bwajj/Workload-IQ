@@ -17,7 +17,7 @@ export function setToken(token: string | null) {
 
 // In production the API lives on a different host (set VITE_API_URL at build);
 // in dev it's empty and Vite proxies /api to the local Flask server.
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+export const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {

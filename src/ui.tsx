@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { RiskTier } from './types';
 import { useTheme } from './theme';
+import { API_BASE } from './api';
 
 /** API-Football's public media CDN — keyed by the same player ids we store. */
 export function playerPhotoUrl(playerId: number) {
@@ -11,7 +12,7 @@ export function playerPhotoUrl(playerId: number) {
 let teamMapPromise: Promise<Map<string, number>> | null = null;
 function getTeamMap(): Promise<Map<string, number>> {
   if (!teamMapPromise) {
-    teamMapPromise = fetch('/api/teams/meta')
+    teamMapPromise = fetch(API_BASE + '/api/teams/meta')
       .then((r) => (r.ok ? r.json() : []))
       .then((rows: { id: number; name: string }[]) => new Map(rows.map((t) => [t.name, t.id])))
       .catch(() => new Map<string, number>());
