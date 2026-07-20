@@ -138,7 +138,8 @@ export default function Evidence() {
 
           <div className="cols-2" style={{ marginTop: 8 }}>
             <div>
-              <table className="table" style={{ marginTop: 16 }}>
+              <div className="table-scroll" style={{ marginTop: 16 }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>What we said</th>
@@ -158,6 +159,7 @@ export default function Evidence() {
                   ))}
                 </tbody>
               </table>
+              </div>
               <p className="footnote" style={{ marginTop: 14 }}>
                 {bt.summary.lift != null && bt.summary.lift >= 1.5 ? (
                   <>High-tier players were injured at <strong>{bt.summary.lift}×</strong> the rate
@@ -179,7 +181,8 @@ export default function Evidence() {
             </div>
 
             <div>
-              <table className="table" style={{ marginTop: 16 }}>
+              <div className="table-scroll" style={{ marginTop: 16 }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Actually injured</th>
@@ -211,6 +214,7 @@ export default function Evidence() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </Section>
@@ -265,7 +269,8 @@ export default function Evidence() {
             </div>
 
             <div>
-              <table className="table" style={{ marginTop: 34 }}>
+              <div className="table-scroll" style={{ marginTop: 34 }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Predicted band</th>
@@ -285,6 +290,7 @@ export default function Evidence() {
                   ))}
                 </tbody>
               </table>
+              </div>
               <p className="footnote" style={{ marginTop: 14 }}>
                 {summary.auc != null && summary.auc <= 0.55 ? (
                   <>An out-of-sample AUC of <strong>{summary.auc}</strong> means the scores rank injured
@@ -382,7 +388,8 @@ export default function Evidence() {
           <p className="chart-caption" style={{ marginTop: 16 }}>
             The body parts hit most this season, and how long players were typically sidelined.
           </p>
-          <table className="table" style={{ marginTop: 4 }}>
+          <div className="table-scroll" style={{ marginTop: 4 }}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Body part</th>
@@ -400,6 +407,7 @@ export default function Evidence() {
               ))}
             </tbody>
           </table>
+          </div>
         </Section>
       </div>
 

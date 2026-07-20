@@ -187,7 +187,8 @@ export default function PlayerDetail() {
           {injuries.length === 0 ? (
             <p className="footnote" style={{ marginTop: 14 }}>No injuries recorded this season.</p>
           ) : (
-            <table className="table" style={{ marginTop: 10 }}>
+            <div className="table-scroll" style={{ marginTop: 10 }}>
+            <table className="table">
               <thead>
                 <tr>
                   <th>Type</th>
@@ -213,6 +214,7 @@ export default function PlayerDetail() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </Section>
       </div>

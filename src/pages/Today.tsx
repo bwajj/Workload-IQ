@@ -92,6 +92,7 @@ export default function Today() {
         ) : filtered.length === 0 ? (
           <div className="empty">No players match your filters.</div>
         ) : (
+          <div className="table-scroll">
           <table className="table">
             <thead>
               <tr>
@@ -140,6 +141,7 @@ export default function Today() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         <p className="footnote" style={{ marginTop: 16 }}>

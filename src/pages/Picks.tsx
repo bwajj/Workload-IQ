@@ -83,7 +83,8 @@ export default function Picks() {
       {loading || !data ? <Loading what="picks" /> : (
         <div className="cols-2">
           <Section label="Captain shortlist" aside={`${data.ranked} regulars ranked`}>
-            <table className="table" style={{ marginTop: 12 }}>
+            <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="table">
               <thead>
                 <tr>
                   <th className="rank">#</th>
@@ -126,6 +127,7 @@ export default function Picks() {
                 ))}
               </tbody>
             </table>
+            </div>
             <p className="footnote" style={{ marginTop: 12 }}>
               Confidence favours reliable, in-form starters with soft fixtures — the low-variance
               captain picks, not the boom-or-bust punts.

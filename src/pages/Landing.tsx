@@ -142,7 +142,8 @@ export default function Landing() {
                   <h2>On the board right now</h2>
                   <span className="aside">{stats.riskTiers.High ?? 0} players currently flagged high-risk</span>
                 </div>
-                <table className="table" style={{ marginTop: 8 }}>
+                <div className="table-scroll" style={{ marginTop: 8 }}>
+                <table className="table">
                   <thead>
                     <tr>
                       <th>Player</th>
@@ -172,6 +173,7 @@ export default function Landing() {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 <p className="footnote" style={{ marginTop: 12 }}>
                   <button className="linklike" onClick={() => nav('/login')}>
                     Sign in to see all {stats.players} players →

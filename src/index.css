@@ -259,6 +259,8 @@ code {
 .kpi-value.risk-low { color: var(--low); }
 
 /* ---------- Tables ---------- */
+/* Wraps wide tables so they scroll on their own instead of the whole page. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .table th {
   text-align: left;
@@ -627,6 +629,49 @@ select.input { cursor: pointer; }
   .cols-2, .cols-2-even { grid-template-columns: 1fr; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .kpi { padding-left: 16px; }
+}
+
+/* ---------- Phone layout ---------- */
+@media (max-width: 720px) {
+  /* Masthead becomes two rows: brand + account on top, a full-width
+     horizontally-scrollable tab strip below (all 7 tabs stay reachable). */
+  .masthead-inner {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 10px 16px;
+  }
+  .wordmark { order: 1; }
+  .masthead-right { order: 2; margin-left: auto; gap: 12px; }
+  .masthead nav {
+    order: 3;
+    flex-basis: 100%;
+    height: auto;
+    gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 2px -16px 0;
+    padding: 0 16px 4px;
+  }
+  .masthead nav::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 6px 11px;
+    border-bottom-width: 2px;
+    margin-bottom: 0;
+  }
+
+  /* Tighter page rhythm on a narrow screen. */
+  .page { padding: 24px 16px 72px; }
+  .page-title { font-size: 26px; }
+  .page-lede { font-size: 14px; }
+  .section { margin-top: 32px; }
+
+  /* Filter controls: search spans the row, dropdowns sit below it. */
+  .controls { gap: 8px; }
+  .input.search { min-width: 0; flex: 1 1 100%; }
 }
 
 /* ---------- States ---------- */
