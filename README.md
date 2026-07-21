@@ -36,7 +36,7 @@ The platform ingests real squads, per-match minutes, injuries and fixtures from
    API_FOOTBALL_KEY=your_key_here
    API_FOOTBALL_HOST=v3.football.api-sports.io
    LEAGUE_ID=39
-   TARGET_SEASON=2023
+   INGEST_SEASONS=2022,2023,2024,2025   # last one = live season
    ```
 2. Check what your plan can access, then ingest:
    ```bash
@@ -75,21 +75,25 @@ more to work with.
   - `$group` — squad/team/body-part roll-ups
 - **Rolling workload features:** minutes played, rest days, back-to-back
   frequency, matches in last 14 days, acute:chronic workload ratio (ACWR).
-- **Injury prediction:** a **logistic-regression** model (scikit-learn) trained
-  on labelled player-match rows (features → injured within 14 days) outputs a
+- **Injury prediction:** a **gradient-boosted classifier**
+  (`HistGradientBoostingClassifier`, scikit-learn) trained on labelled
+  player-match rows (features → **soft-tissue** injury within 14 days) outputs a
   probability, blended with interpretable sports-science rules to tier players
-  **Low / Moderate / High**.
+  **Low / Moderate / High**. Validated with **GroupKFold by player** (honest
+  ROC-AUC ≈ 0.64); only shipped if it beats baseline, else it falls back to the
+  transparent ACWR rule set.
 - **Rotation planner:** for each team's next fixture, recommends the
   lowest-risk XI (4-3-3), flags high-risk players to rest, and lists injured
   players who are unavailable.
-- **React dashboard:** overview + risk board + correlation charts + per-player
-  **workload timelines overlaid with injury events** + rotation planner.
+- **React dashboard:** overview + risk board + fixture ticker + player compare +
+  FPL squad view + evidence/backtest + per-player **workload timelines overlaid
+  with injury events**.
 
-> The dataset is **simulated** (deterministic seed). Crucially, injuries are
-> *generated from* workload in the model, so the correlations the platform
-> surfaces — and the ML signal — are real, not noise. It reproduces the
+> The dataset is **real** — four seasons (2022-23 → 2025-26) of squads, per-match
+> minutes, injuries and fixtures from API-Football, across all competitions
+> (league, domestic cups, Europe, internationals). The platform reproduces the
 > well-documented **U-shaped ACWR risk curve** (lowest risk in the 0.8–1.3
-> "sweet spot").
+> "sweet spot") from that real data.
 
 ## Getting started
 
@@ -133,12 +137,27 @@ Steps:
 3. **Render**: new Web Service from the GitHub repo, root dir `backend`. Env vars:
    `MONGO_URI`, `API_FOOTBALL_KEY`, `API_FOOTBALL_HOST`, `AUTH_SECRET`,
    `DATA_SOURCE=apifootball`, `INGEST_SEASONS`, `SMTP_*`, `MAIL_FROM`,
-   `APP_URL=<vercel-url>`. It boots `gunicorn wsgi:app` (trains the model on start).
+   `APP_URL=<vercel-url>`. It boots `gunicorn wsgi:app`, which binds the port
+   fast and **trains the model lazily on the first scoring request** (data is
+   expected to already be in Atlas from step 2).
 4. **Vercel**: import the repo, framework Vite. Env var `VITE_API_URL=<render-url>`.
    Redeploy so the frontend calls the Render API.
 
 Secrets are never committed (`.env`, keys, caches are gitignored) — set them in each
 host's dashboard. Local chat/transcript files live outside the repo and are not deployed.
+
+**Deploy gotchas** (learned the hard way):
+- `MONGO_URI` must be the **complete** SRV string
+  (`mongodb+srv://user:pass@host/?...`) — no placeholder `<>` brackets. Avoid
+  special characters in the DB password (`$` needs `%24` and some dashboards treat
+  `$` as variable interpolation); a plain alphanumeric password is simplest.
+- Set `AUTH_SECRET` to a **fixed** long random string. If it's unset the backend
+  generates a random one per boot, so every restart/cold-start invalidates all
+  session tokens and silently logs users out.
+- Render's free tier sleeps after ~15 min idle (~50 s cold start). A
+  `.github/workflows/keep-warm.yml` Action pings `/api/health` on a schedule to
+  keep it awake; GitHub cron is unreliable under load, so an external pinger
+  (e.g. UptimeRobot, 5-min interval) is the sturdier free option.
 
 ## Fantasy Premier League link
 
