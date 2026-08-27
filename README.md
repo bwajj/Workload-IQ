@@ -220,6 +220,30 @@ the value is mid-season, when new injuries / lineups / transfers land. A running
 API server picks up refreshed data on its next model reload (restart or
 `POST /api/ingest`).
 
+## Bumping to a new season
+
+The live season is just the **last** entry in `INGEST_SEASONS`; the reference
+date, masthead label (`/api/health` → `season`), and roster all derive from the
+data, so rolling forward is config + a re-ingest — no code changes:
+
+1. **API access**: the current season needs a **paid API-Football plan** (the free
+   tier only exposes 2022–2024). Confirm with
+   `backend/venv/bin/python apifootball.py probe`.
+2. Set the window (last = live), e.g. for 2026-27:
+   `INGEST_SEASONS=2023,2024,2025,2026` in `backend/.env` **and** the Render
+   dashboard.
+3. Re-ingest into Atlas (rebuilds features + retrains; atomic swap keeps the old
+   data live until it completes):
+   ```bash
+   MONGO_URI="<atlas-uri>" INGEST_SEASONS=2023,2024,2025,2026 \
+     backend/venv/bin/python backend/pipeline.py all
+   backend/venv/bin/python backend/pipeline.py map-fpl   # refresh FPL price/id map
+   ```
+4. Restart the Render service (or `POST /api/ingest`) so the API reloads the model.
+
+`ingest()` is wholesale — it rebuilds `games/injuries/fixtures/teams/players` from
+the whole list — so keep every season you want retained in `INGEST_SEASONS`.
+
 ## Tests
 
 Pure-logic unit tests cover the workload feature engineering, risk scoring,

@@ -68,7 +68,7 @@ export const api = {
 
   // Data
   publicStats: () => get<PublicStats>('/api/public/stats'),
-  health: () => get<{ status: string; mongoConnected: boolean; lastRefresh?: string | null }>('/api/health'),
+  health: () => get<{ status: string; mongoConnected: boolean; lastRefresh?: string | null; season?: number | null }>('/api/health'),
   overview: () => get<Overview>('/api/overview'),
   teams: () => get<string[]>('/api/teams'),
   players: (team?: string) => get<ScoredPlayer[]>(`/api/players${teamQuery(team)}`),

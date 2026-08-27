@@ -28,10 +28,19 @@ function relativeTime(iso: string): string {
 export default function App() {
   const { user, ready, logout } = useAuth();
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
+  const [season, setSeason] = useState<number | null>(null);
 
   useEffect(() => {
-    if (user) api.health().then((h) => setLastRefresh(h.lastRefresh ?? null)).catch(() => {});
+    if (user) api.health().then((h) => {
+      setLastRefresh(h.lastRefresh ?? null);
+      setSeason(h.season ?? null);
+    }).catch(() => {});
   }, [user]);
+
+  // "2026" -> "2026–27"; falls back to a neutral label until health responds.
+  const seasonLabel = season != null
+    ? `Premier League ${season}–${String((season + 1) % 100).padStart(2, '0')}`
+    : 'Premier League';
 
   if (!ready) return null;
   if (!user) {
@@ -62,7 +71,7 @@ export default function App() {
           </nav>
           <div className="masthead-right">
             <div className="masthead-meta">
-              <div className="micro">Premier League 2025–26</div>
+              <div className="micro">{seasonLabel}</div>
               <div className="small muted">
                 {lastRefresh ? `Updated ${relativeTime(lastRefresh)}` : 'via API-Football'}
               </div>

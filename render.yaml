@@ -13,7 +13,7 @@ services:
       - key: DATA_SOURCE
         value: apifootball
       - key: INGEST_SEASONS
-        value: "2022,2023,2024,2025"
+        value: "2023,2024,2025,2026"
       - key: API_FOOTBALL_HOST
         value: v3.football.api-sports.io
       - key: PYTHON_VERSION
