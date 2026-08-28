@@ -209,6 +209,10 @@ def fpl_squad():
             continue
         players.append({**s, "isCaptain": p["isCaptain"], "isViceCaptain": p["isViceCaptain"],
                         "onBench": p["onBench"], "price": p.get("price"),
+                        # Use FPL's position for the squad view so the formation
+                        # matches the manager's actual FPL team, not our roster's
+                        # classification.
+                        "position": p.get("position") or s.get("position"),
                         "available": p["playerId"] not in injured})
     risk.tag_confidence(players, reference_now())
     players.sort(key=lambda s: (s["onBench"], -s["riskProbability"]))
