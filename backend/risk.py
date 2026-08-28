@@ -347,7 +347,11 @@ def gameweek_picks(gameweek=None):
     if not gws:
         return None
     if gameweek is None or gameweek not in {g["round"] for g in gws}:
-        gameweek = gws[-1]["round"]
+        # Default to the upcoming round (first whose fixtures are still ahead of
+        # the data's reference date), not the season finale.
+        ref = feat.get_reference_date()
+        upcoming = [g for g in gws if g["start"] >= ref]
+        gameweek = (upcoming[0] if upcoming else gws[-1])["round"]
 
     first_fixture = db.fixtures().find_one({"round": gameweek}, sort=[("date", 1)])
     if not first_fixture:
@@ -358,13 +362,20 @@ def gameweek_picks(gameweek=None):
     scored = score_players(feat.compute_all_features(as_of))
     injured = currently_injured_ids(as_of)
 
+    # "Regular" is relative to the season's stage: half the load a first-choice
+    # starter has accrued by now. A fixed 45 wrongly excluded everyone in the
+    # opening weeks, when even ever-presents have only a game or two behind them.
+    played = [s["chronic28"] for s in scored if s["matches14"] >= 1]
+    ref_load = float(np.percentile(played, 90)) if played else 45.0
+    chronic_floor = min(45.0, 0.45 * ref_load)
+
     picks = []
     for s in scored:
         fx = fixtures.get(s["team"])
-        # Only rank fit regulars whose team actually plays this round — chronic
-        # load filters out fringe players who got a one-off cameo.
+        # Only rank fit regulars whose team actually plays this round — the
+        # chronic-load floor filters out fringe players who got a one-off cameo.
         if (s["playerId"] in injured or fx is None or s.get("form") is None
-                or s["matches14"] < 1 or s["chronic28"] < 45):
+                or s["matches14"] < 1 or s["chronic28"] < chronic_floor):
             continue
         diff = fx.get("difficulty")
         entry = {**s,
