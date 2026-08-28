@@ -231,8 +231,11 @@ def _season_data(season, gid, iid, is_live):
     squad_info, player_bio = {}, {}
     if is_live:
         for t in teams:
+            tname = t["team"]["name"]
             for pl in af.get_squad(t["team"]["id"]):
-                squad_info[pl["id"]] = {"age": pl.get("age"), "number": pl.get("number")}
+                squad_info[pl["id"]] = {"age": pl.get("age"), "number": pl.get("number"),
+                                        "name": pl.get("name"), "team": tname,
+                                        "position": pl.get("position")}
         try:
             for pl in af.get_players(league, season):
                 p = pl.get("player", {})
@@ -246,8 +249,12 @@ def _season_data(season, gid, iid, is_live):
         [f for f in fixtures if f["fixture"]["status"]["short"] in FINISHED],
         key=lambda f: f["fixture"]["date"],
     )
-    if is_live and UPCOMING_RESERVE:
-        detail = finished[:-UPCOMING_RESERVE][-MAX_FIXTURE_DETAIL:]
+    # Hold back the most recent finished games as a backtest holdout — but never
+    # gut an early season: cap the reserve so most played games are still scored
+    # and the reference date tracks roughly "now".
+    reserve = min(UPCOMING_RESERVE, len(finished) // 5) if is_live else 0
+    if reserve:
+        detail = finished[:-reserve][-MAX_FIXTURE_DETAIL:]
     else:
         detail = finished[-MAX_FIXTURE_DETAIL:]
     reference_date = _parse(detail[-1]["fixture"]["date"]) if detail else \
@@ -334,13 +341,20 @@ def _season_data(season, gid, iid, is_live):
             team_docs.append(doc)
             strength[doc["name"]] = doc
 
-        # Roster from the live season's participants. A player's club is their
-        # LATEST league game's team, so mid-season transfers show the new club
-        # (list order + internationals labelled with the old club would mislead).
+        # Roster = every player in the live-season squads, so the board is full
+        # even early in the season before most players have logged minutes. A
+        # player's club is their LATEST league game's team when they've played
+        # (captures mid-season transfers); otherwise it's their squad's club.
         roster = {}
+        for pid, sq in squad_info.items():
+            roster[pid] = {"name": sq.get("name") or "", "team": sq.get("team") or "",
+                           "positions": [_pos(sq.get("position"))] if sq.get("position") else [],
+                           "team_date": None}
         for g in games:
             e = roster.setdefault(g["playerId"], {
                 "name": g["playerName"], "team": g["team"], "positions": [], "team_date": None})
+            if g["playerName"]:
+                e["name"] = g["playerName"]
             e["positions"].append(g["position"])
             if g["competition"] == "Premier League" and (e["team_date"] is None or g["date"] >= e["team_date"]):
                 e["team"] = g["team"]
@@ -349,9 +363,10 @@ def _season_data(season, gid, iid, is_live):
             sq = squad_info.get(pid, {})
             bio = player_bio.get(pid, {})
             age = _age_from_birth(bio.get("birth"), reference_date) or _valid_age(sq.get("age"))
+            positions = [p for p in e["positions"] if p]
             players.append({
                 "_id": pid, "name": e["name"], "team": e["team"],
-                "position": Counter(e["positions"]).most_common(1)[0][0],
+                "position": Counter(positions).most_common(1)[0][0] if positions else "MID",
                 "age": age, "nationality": bio.get("nationality", ""), "number": sq.get("number"),
             })
         known = sum(1 for p in players if p["age"] is not None)
