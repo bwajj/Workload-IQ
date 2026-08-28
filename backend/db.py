@@ -17,7 +17,10 @@ _client = None
 def get_client() -> MongoClient:
     global _client
     if _client is None:
-        kwargs = {"serverSelectionTimeoutMS": 3000}
+        # 10s server-selection: on a free-tier cold start the first query races
+        # the Atlas SRV lookup + TLS handshake; 3s was too short and surfaced as
+        # a 500 on the very first login after the instance woke.
+        kwargs = {"serverSelectionTimeoutMS": 10000}
         # Atlas (mongodb+srv / TLS) needs a CA bundle; certifi ships one so it
         # works regardless of the OS's system certs.
         if MONGO_URI.startswith("mongodb+srv") or "mongodb.net" in MONGO_URI:

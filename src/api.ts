@@ -19,6 +19,8 @@ export function setToken(token: string | null) {
 // in dev it's empty and Vite proxies /api to the local Flask server.
 export const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -27,7 +29,30 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(API_BASE + url, { ...options, headers });
+  // The backend runs on a free tier that sleeps; the first request after it
+  // wakes can briefly 5xx (cold DB connect / gateway spin-up). Retry those
+  // transient failures a few times so users don't see a spurious error. Only
+  // retry idempotent calls (GET or login); 502/503/504 mean the request never
+  // reached the app, so those are safe to retry for any method.
+  const method = (options?.method || 'GET').toUpperCase();
+  const idempotent = method === 'GET' || url === '/api/auth/login';
+
+  let res!: Response;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      res = await fetch(API_BASE + url, { ...options, headers });
+    } catch (e) {
+      if (attempt < 3) { await sleep(1500 * (attempt + 1)); continue; }
+      throw e;
+    }
+    const transient = res.status === 502 || res.status === 503 || res.status === 504
+      || (res.status === 500 && idempotent);
+    if (transient && attempt < 3) {
+      await sleep(1500 * (attempt + 1));
+      continue;
+    }
+    break;
+  }
 
   if (res.status === 401 && !url.startsWith('/api/auth/')) {
     // Session expired or revoked — tell the auth layer to reset.
