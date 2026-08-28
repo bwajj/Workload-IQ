@@ -21,6 +21,7 @@ def main():
     if cmd == "map-fpl":
         import fpl
         print("FPL player map:", fpl.build_player_map())
+        print("Club reconcile:", fpl.reconcile_clubs())
         return
 
     if cmd in ("ingest", "all"):

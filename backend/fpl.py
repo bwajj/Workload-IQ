@@ -31,6 +31,7 @@ BOOTSTRAP_TTL = 12 * 3600  # bootstrap-static changes slowly within a season
 TEAM_ALIAS = {
     "Man City": "Manchester City", "Man Utd": "Manchester United",
     "Spurs": "Tottenham", "Nott'm Forest": "Nottingham Forest",
+    "Coventry City": "Coventry", "Ipswich Town": "Ipswich",
 }
 POS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 
@@ -136,6 +137,57 @@ def build_player_map() -> dict:
         coll.create_index("fplId")
     return {"fplConsidered": considered, "mapped": len(docs),
             "ourRoster": len(ours), "ourMapped": len(seen)}
+
+
+def reconcile_clubs() -> dict:
+    """Correct roster clubs against FPL, the transfer-timely source.
+
+    API-Football's squad endpoint can lag late-window moves by days; FPL updates
+    them immediately. Match each FPL player to our roster by name (independent of
+    club, so a moved player still matches) and, when FPL's club disagrees, update
+    both `players` and `current_features`. Only confident name matches are touched.
+    """
+    import re as _re, unicodedata as _ud
+
+    def _norm(s):
+        s = _ud.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+        return _re.sub(r"[^a-z ]", "", s)
+
+    def _toks(s):
+        return set(_norm(s).split())
+
+    bs = get_bootstrap()
+    team_by_fpl = {t["id"]: TEAM_ALIAS.get(t["name"], t["name"]) for t in bs["teams"]}
+    our_teams = set(team_by_fpl.values())
+    ours = list(db.players().find({}))
+    by_surname: dict[str, list] = {}
+    for p in ours:
+        toks = _norm(p["name"]).split()
+        if toks:
+            by_surname.setdefault(toks[-1], []).append(p)
+
+    changes = []
+    for e in bs["elements"]:
+        fteam = team_by_fpl.get(e["team"])
+        if not fteam or fteam not in our_teams:
+            continue
+        ftoks = _toks(e.get("first_name", "") + " " + e.get("second_name", "")) | _toks(e.get("web_name", ""))
+        surtok = (_norm(e.get("second_name", "")).split() or _norm(e.get("web_name", "")).split())
+        if not surtok:
+            continue
+        best, best_score = None, 0
+        for c in by_surname.get(surtok[-1], []):
+            sc = len(_toks(c["name"]) & ftoks)
+            if sc > best_score:
+                best, best_score = c, sc
+        if best and best_score >= 2 and best["team"] != fteam:
+            changes.append({"id": best["_id"], "name": best["name"],
+                            "from": best["team"], "to": fteam})
+
+    for ch in changes:
+        db.players().update_one({"_id": ch["id"]}, {"$set": {"team": ch["to"]}})
+        db.get_db()["current_features"].update_one({"_id": ch["id"]}, {"$set": {"team": ch["to"]}})
+    return {"corrected": len(changes), "changes": changes}
 
 
 def prices_by_our_id() -> dict:
