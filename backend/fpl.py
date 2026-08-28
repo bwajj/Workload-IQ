@@ -187,7 +187,11 @@ def reconcile_clubs() -> dict:
     for ch in changes:
         db.players().update_one({"_id": ch["id"]}, {"$set": {"team": ch["to"]}})
         db.get_db()["current_features"].update_one({"_id": ch["id"]}, {"$set": {"team": ch["to"]}})
-    return {"corrected": len(changes), "changes": changes}
+
+    # Manual overrides win over both API-Football and FPL (some deals lag both).
+    import overrides
+    ov = overrides.apply_overrides(db)
+    return {"corrected": len(changes), "changes": changes, "overrides": ov}
 
 
 def prices_by_our_id() -> dict:

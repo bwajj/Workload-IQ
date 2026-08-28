@@ -211,6 +211,12 @@ def ingest():
     feat.set_reference_date(reference_date, {
         "dataSource": "apifootball", "season": live, "seasons": seasons, "league": league,
     })
+    # Apply manual transfer corrections to the fresh roster before features are
+    # computed, so current_features inherits the right club.
+    import overrides
+    ov = overrides.apply_overrides(db)
+    if ov["changed"]:
+        print(f"  applied {len(ov['changed'])} manual club override(s).")
     print("  persisted to MongoDB.")
     return {
         "seasons": seasons, "players": len(players), "games": len(all_games),
