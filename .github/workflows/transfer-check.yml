@@ -1,0 +1,39 @@
+name: Transfer check
+
+# Once a day, during an open transfer window, re-sync roster clubs to FPL so the
+# app follows moves (e.g. a player's new club) without a manual poke. No-ops
+# outside the window. Needs only the MONGO_URI secret (FPL's API is public);
+# add SMTP_* + DIGEST_TO secrets to also get an email digest of any changes.
+on:
+  schedule:
+    - cron: "0 9 * * *" # daily ~09:00 UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even if the transfer window is closed"
+        type: boolean
+        default: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Run transfer check
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          DATA_SOURCE: apifootball
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
+        run: python transfer_check.py ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
