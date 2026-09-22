@@ -167,10 +167,17 @@ def build_player_map() -> dict:
                 seen.add(mid); mapped_fpl.add(e["fplId"])
                 docs.append(doc_for(mid, e, how))
 
+    # Guard only the goalkeeper/outfield split (which stopped 'David Raya Martín'
+    # joining 'Martín Zubimendi'); a MID/FWD/DEF reclassification between FPL and
+    # our data must not block a match, or a repositioned transfer goes unmapped.
+    def _bucket(pos):
+        return "GK" if pos == "GK" else "OUT"
+
     mapped_fpl: set = set()
     run(lambda e: [c for c in cand if c["team"] == e["team"] and c["pos"] == e["position"]], False)
-    run(lambda e: [c for c in cand if c["team"] == e["team"]], True)          # club, any pos
-    run(lambda e: [c for c in cand if c["pos"] == e["position"]], True)       # transfers: pos, any club
+    run(lambda e: [c for c in cand if c["team"] == e["team"]
+                   and _bucket(c["pos"]) == _bucket(e["position"])], True)     # club, same bucket
+    run(lambda e: [c for c in cand if _bucket(c["pos"]) == _bucket(e["position"])], True)  # transfers
 
     coll = db.get_db()["player_map"]
     coll.drop()
