@@ -44,18 +44,21 @@ export default function PlayerDetail() {
   const seasonTimeline = activeSeason == null ? timeline : timeline.filter((t) => t.season === activeSeason);
   const chartData = seasonTimeline.map((t) => ({ ...t, label: shortDate(t.date) }));
 
-  const injuryMarks = injuries.map((inj) => {
-    const onset = new Date(inj.dateInjured).getTime();
-    let best: string | undefined;
+  // Flag the match each injury happened in: the player's last appearance on or
+  // before the onset day, if the onset follows within a week. The recorded onset
+  // is two days before the first missed fixture, so it often lands after the last
+  // game shown — an onset with no recent appearance isn't tied to a match.
+  const day = (d: string) => Math.floor(new Date(d).getTime() / 86_400_000);
+  const injuredAt = new Map<string, string>();
+  for (const inj of injuries) {
+    const onset = day(inj.dateInjured);
+    let game: (typeof chartData)[number] | undefined;
     for (const p of chartData) {
-      if (new Date(p.date).getTime() <= onset) best = p.label;
+      if (day(p.date) <= onset) game = p;
     }
-    // only mark injuries that fall inside the shown season's date range
-    const first = chartData[0] && new Date(chartData[0].date).getTime();
-    const last = chartData[chartData.length - 1] && new Date(chartData[chartData.length - 1].date).getTime();
-    const inRange = first != null && last != null && onset >= first && onset <= last;
-    return { label: best, type: inj.type, inRange };
-  }).filter((m) => m.label && m.inRange);
+    if (game && onset - day(game.date) <= 7) injuredAt.set(game.label, inj.type);
+  }
+  const injuredNow = injuries.some((inj) => inj.status === 'Active');
 
   return (
     <div>
@@ -96,12 +99,16 @@ export default function PlayerDetail() {
             mild={(risk.fatigue ?? 0) >= 45}
           />
           <Stat value={risk.form != null ? risk.form.toFixed(1) : '—'} label="Form · avg rating" />
-          <Stat
-            value={risk.daysSinceReturn != null && risk.daysSinceReturn < 400 ? `${risk.daysSinceReturn}d` : '—'}
-            label="Since injury return"
-            flag={(risk.daysSinceReturn ?? 400) <= 21}
-            mild={(risk.daysSinceReturn ?? 400) <= 45}
-          />
+          {injuredNow ? (
+            <Stat value="Out" label="Currently injured" flag />
+          ) : (
+            <Stat
+              value={risk.daysSinceReturn != null && risk.daysSinceReturn < 400 ? `${risk.daysSinceReturn}d` : '—'}
+              label="Since injury return"
+              flag={(risk.daysSinceReturn ?? 400) <= 21}
+              mild={(risk.daysSinceReturn ?? 400) <= 45}
+            />
+          )}
           <Stat
             value={risk.priorInjuries ?? 0}
             label="Injuries · last year"
@@ -126,7 +133,8 @@ export default function PlayerDetail() {
           {seasons.length > 1 && <><strong>{seasonLabel(activeSeason!)}</strong> · {chartData.length} matches. </>}
           Bars are minutes per match — <strong>green bars are non-league games</strong> (domestic
           cups, Europe, internationals); the line is the acute:chronic workload ratio (right axis).
-          The shaded band is the 0.8–1.3 safe zone; dashed markers are injury onsets.
+          The shaded band is the 0.8–1.3 safe zone; <strong>red bars flagged ⚑ are matches
+          where an injury occurred</strong>.
         </p>
         <div style={{ height: 340 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -139,25 +147,32 @@ export default function PlayerDetail() {
                 contentStyle={ct.tooltip}
                 labelFormatter={(label, payload: any) => {
                   const d = payload?.[0]?.payload;
-                  return d ? `${label} · ${d.home ? 'vs' : '@'} ${d.opponent} · ${d.competition}` : label;
+                  if (!d) return label;
+                  const hurt = injuredAt.get(d.label);
+                  return `${label} · ${d.home ? 'vs' : '@'} ${d.opponent} · ${d.competition}` +
+                    (hurt ? ` · ⚑ injured: ${hurt}` : '');
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 12, color: ct.mutedText }} />
               <ReferenceArea yAxisId="acwr" y1={0.8} y2={1.3} fill={ct.low} fillOpacity={ct.safeBandOpacity} />
               <Bar yAxisId="min" dataKey="minutes" name="Minutes" fill={ct.neutralBar} radius={[3, 3, 0, 0]} maxBarSize={16}>
                 {chartData.map((d, i) => (
-                  <Cell key={i} fill={d.competition !== 'Premier League' ? ct.euroBar : ct.neutralBar} />
+                  <Cell
+                    key={i}
+                    fill={injuredAt.has(d.label) ? ct.high
+                      : d.competition !== 'Premier League' ? ct.euroBar : ct.neutralBar}
+                  />
                 ))}
               </Bar>
               <Line yAxisId="acwr" type="monotone" dataKey="acwr" name="ACWR" stroke={ct.ink} strokeWidth={2} dot={{ r: 2.5, fill: ct.ink }} />
-              {injuryMarks.map((m, i) => (
+              {[...injuredAt.keys()].map((label) => (
                 <ReferenceLine
-                  key={i}
+                  key={label}
                   yAxisId="acwr"
-                  x={m.label}
+                  x={label}
                   stroke={ct.high}
                   strokeDasharray="4 3"
-                  label={{ value: 'injury', position: 'top', fontSize: 11, fill: ct.high }}
+                  label={{ value: '⚑ injured', position: 'top', fontSize: 11, fill: ct.high }}
                 />
               ))}
             </ComposedChart>
