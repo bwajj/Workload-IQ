@@ -106,7 +106,9 @@ def compute_features(reference_date: datetime | None = None):
     injuries = list(db.injuries().find({}))
 
     if reference_date is None:
-        reference_date = max((g["date"] for g in games), default=datetime.utcnow())
+        # Prefer the date ingest stamped (a live season's "now"); else the latest game.
+        stored = (db.get_db()["meta"].find_one({"_id": "meta"}) or {}).get("referenceDate")
+        reference_date = stored or max((g["date"] for g in games), default=datetime.utcnow())
 
     # Appearances per player (sorted by date), carrying the match rating.
     appearances: dict[int, list] = {}

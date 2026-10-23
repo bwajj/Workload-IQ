@@ -25,6 +25,10 @@ TARGET_SEASON = int(os.environ.get("TARGET_SEASON", "2023"))
 
 BASE_URL = f"https://{API_HOST}"
 CACHE_DIR = Path(__file__).with_name(".api-cache")
+# The newest ingested season is in progress: its fixture lists, injuries, standings
+# and bios keep changing, so they are always fetched fresh (see _is_volatile).
+LIVE_SEASON = max(int(s) for s in
+                  os.environ.get("INGEST_SEASONS", str(TARGET_SEASON)).split(",") if s.strip())
 
 # Throttle: keep <=9 requests / 60s (leave headroom under the 10/min limit).
 _MAX_PER_MIN = int(os.environ.get("REQ_PER_MIN", "9"))  # Pro plans allow far more
@@ -54,10 +58,21 @@ def _cache_path(endpoint: str, params: dict) -> Path:
     return CACHE_DIR / f"{safe}_{digest}.json"
 
 
+def _is_volatile(endpoint: str, params: dict) -> bool:
+    """Responses that change while a season is in progress: anything for the live
+    season or later (calendar-year international comps) and current squads.
+    Per-fixture box scores carry no season and are final once a game ends."""
+    season = params.get("season")
+    return (endpoint.strip("/") == "players/squads"
+            or (season is not None and int(season) >= LIVE_SEASON))
+
+
 def _request(endpoint: str, params: dict, use_cache: bool = True) -> dict:
     if not API_KEY:
         raise ApiError("API_FOOTBALL_KEY is not set in backend/.env")
 
+    if _is_volatile(endpoint, params):
+        use_cache = False
     cache_file = _cache_path(endpoint, params)
     if use_cache and cache_file.exists():
         return json.loads(cache_file.read_text())

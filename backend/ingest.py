@@ -12,7 +12,7 @@ limit. Already-cached fixtures cost no quota, so ingestion is resumable.
 from __future__ import annotations
 import os
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import apifootball as af
 import db
@@ -269,6 +269,11 @@ def _season_data(season, gid, iid, is_live):
     reference_date = _parse(detail[-1]["fixture"]["date"]) if detail else \
         _parse(finished[-1]["fixture"]["date"])
     window_start = _parse(detail[0]["fixture"]["date"]) if detail else reference_date
+    # Mid-season, "today" is now rather than the last league game: midweek
+    # European/cup games then count toward workload, and injuries reported since
+    # the last league game show as active.
+    if is_live and has_real_upcoming:
+        reference_date = max(reference_date, datetime.now(timezone.utc).replace(tzinfo=None))
 
     # League games
     games = []
@@ -330,6 +335,14 @@ def _season_data(season, gid, iid, is_live):
     print(f"    games: {len(games)} (league + cups/euro + internationals)")
 
     raw = af.get_injuries(league, season)
+    # Absences reported only against European/cup fixtures (e.g. a player hurt in
+    # the Champions League before his club's next league game) — our clubs only.
+    for lg in CLUB_COMPS:
+        try:
+            raw += [r for r in af.get_injuries(lg, season)
+                    if (r.get("team") or {}).get("id") in pl_ids]
+        except af.ApiError:
+            continue
     injuries, iid = _build_injury_episodes(raw, team_name, reference_date, iid)
     print(f"    injury episodes: {len(injuries)}")
 
