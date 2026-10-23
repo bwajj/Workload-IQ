@@ -255,10 +255,13 @@ def _season_data(season, gid, iid, is_live):
         [f for f in fixtures if f["fixture"]["status"]["short"] in FINISHED],
         key=lambda f: f["fixture"]["date"],
     )
-    # Hold back the most recent finished games as a backtest holdout — but never
-    # gut an early season: cap the reserve so most played games are still scored
-    # and the reference date tracks roughly "now".
-    reserve = min(UPCOMING_RESERVE, len(finished) // 5) if is_live else 0
+    # Hold back the most recent finished games as a synthetic "upcoming" gameweek —
+    # only for a completed season with no real fixtures left to play. Mid-season the
+    # genuinely unplayed fixtures are the upcoming set, so score every finished game
+    # and let the reference date track "now".
+    has_real_upcoming = any(f["fixture"]["status"]["short"] in ("NS", "TBD") for f in fixtures)
+    reserve = (min(UPCOMING_RESERVE, len(finished) // 5)
+               if is_live and not has_real_upcoming else 0)
     if reserve:
         detail = finished[:-reserve][-MAX_FIXTURE_DETAIL:]
     else:
